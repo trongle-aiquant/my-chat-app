@@ -7,7 +7,7 @@ export const TaskForm: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!text.trim()) {
       setError('Please enter a task');
       return;
@@ -39,10 +39,7 @@ export const TaskForm: React.FC = () => {
           Add
         </button>
       </div>
-      {error && (
-        <div className="text-red-500 text-sm mt-2">{error}</div>
-      )}
+      {error && <div className="text-red-500 text-sm mt-2">{error}</div>}
     </form>
   );
 };
-

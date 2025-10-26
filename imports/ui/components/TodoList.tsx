@@ -13,9 +13,7 @@ export const TodoList: React.FC = () => {
     return TasksCollection.find(filter, { sort: { createdAt: -1 } });
   }, [hideCompleted]);
 
-  const pendingCount = useFind(() => 
-    TasksCollection.find({ isChecked: false })
-  ).length;
+  const pendingCount = useFind(() => TasksCollection.find({ isChecked: false })).length;
 
   if (isLoading()) {
     return (
@@ -28,9 +26,7 @@ export const TodoList: React.FC = () => {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-2xl font-bold text-gray-800">
-          Todo List ({pendingCount} pending)
-        </h2>
+        <h2 className="text-2xl font-bold text-gray-800">Todo List ({pendingCount} pending)</h2>
         <label className="flex items-center gap-2 cursor-pointer">
           <input
             type="checkbox"
@@ -44,7 +40,7 @@ export const TodoList: React.FC = () => {
 
       <div className="bg-white rounded-lg shadow-lg p-4">
         <TaskForm />
-        
+
         {tasks.length === 0 ? (
           <div className="text-center text-gray-500 py-8">
             {hideCompleted ? 'All tasks completed! 🎉' : 'No tasks yet. Add one above! ✨'}
@@ -60,4 +56,3 @@ export const TodoList: React.FC = () => {
     </div>
   );
 };
-

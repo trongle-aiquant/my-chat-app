@@ -35,4 +35,3 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task }) => {
     </li>
   );
 };
-

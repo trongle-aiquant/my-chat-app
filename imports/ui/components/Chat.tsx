@@ -25,7 +25,7 @@ export const Chat: React.FC = () => {
   return (
     <div className="max-w-2xl mx-auto">
       <h2 className="text-2xl font-bold mb-4 text-gray-800">Chat Room</h2>
-      
+
       <div className="bg-white rounded-lg shadow-lg p-4 mb-4">
         <div className="h-96 overflow-y-auto mb-4">
           {messages.length === 0 ? (
@@ -33,16 +33,13 @@ export const Chat: React.FC = () => {
               No messages yet. Be the first to say hello! 👋
             </div>
           ) : (
-            messages.map((message) => (
-              <ChatMessage key={message._id} message={message} />
-            ))
+            messages.map((message) => <ChatMessage key={message._id} message={message} />)
           )}
           <div ref={messagesEndRef} />
         </div>
-        
+
         <ChatForm />
       </div>
     </div>
   );
 };
-
