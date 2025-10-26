@@ -1,6 +1,12 @@
 import { Meteor } from 'meteor/meteor';
 import { Link, LinksCollection } from '/imports/api/links';
 
+// Import methods and publications
+import '/imports/api/messagesMethods';
+import '/imports/api/messagesPublications';
+import '/imports/api/tasksMethods';
+import '/imports/api/tasksPublications';
+
 async function insertLink({ title, url }: Pick<Link, 'title' | 'url'>) {
   await LinksCollection.insertAsync({ title, url, createdAt: new Date() });
 }
@@ -34,4 +40,6 @@ Meteor.startup(async () => {
   Meteor.publish("links", function () {
     return LinksCollection.find();
   });
+
+  console.log('🚀 Server started successfully!');
 });
