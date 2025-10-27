@@ -3,7 +3,7 @@ import { check } from 'meteor/check';
 import { TasksCollection } from './tasks';
 
 Meteor.methods({
-  async 'tasks.insert'(text: string) {
+  'tasks.insert': async function (text: string) {
     check(text, String);
 
     if (!text || text.trim().length === 0) {
@@ -17,12 +17,12 @@ Meteor.methods({
     });
   },
 
-  async 'tasks.remove'(taskId: string) {
+  'tasks.remove': async function (taskId: string) {
     check(taskId, String);
     return await TasksCollection.removeAsync(taskId);
   },
 
-  async 'tasks.setChecked'(taskId: string, isChecked: boolean) {
+  'tasks.setChecked': async function (taskId: string, isChecked: boolean) {
     check(taskId, String);
     check(isChecked, Boolean);
 
@@ -31,4 +31,3 @@ Meteor.methods({
     });
   },
 });
-

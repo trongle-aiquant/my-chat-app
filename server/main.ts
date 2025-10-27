@@ -6,6 +6,8 @@ import '/imports/api/messagesMethods';
 import '/imports/api/messagesPublications';
 import '/imports/api/tasksMethods';
 import '/imports/api/tasksPublications';
+import '/imports/api/typingIndicatorsMethods';
+import '/imports/api/typingIndicatorsPublications';
 
 async function insertLink({ title, url }: Pick<Link, 'title' | 'url'>) {
   await LinksCollection.insertAsync({ title, url, createdAt: new Date() });
