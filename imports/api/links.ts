@@ -8,3 +8,5 @@ export interface Link {
 }
 
 export const LinksCollection = new Mongo.Collection<Link>('links');
+
+// Hello Meteor
