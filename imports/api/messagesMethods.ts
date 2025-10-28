@@ -83,6 +83,11 @@ Meteor.methods({
     check(messageId, String);
     check(username, String);
 
+    // Validation: username không được rỗng
+    if (!username || username.trim().length === 0) {
+      throw new Meteor.Error('invalid-username', 'Username cannot be empty');
+    }
+
     const message = await MessagesCollection.findOneAsync(messageId);
     if (!message) {
       throw new Meteor.Error('not-found', 'Message not found');
@@ -93,16 +98,27 @@ Meteor.methods({
     // Check if already marked as seen by this user
     const alreadySeen = seenBy.find((s) => s.username === username);
     if (alreadySeen) {
+      // Đã seen rồi, không cần update
+      if (Meteor.isDevelopment) {
+        console.log(`Message ${messageId} already seen by ${username}`);
+      }
       return; // Already seen
     }
 
-    return await MessagesCollection.updateAsync(messageId, {
+    // Update message với seenBy mới
+    const result = await MessagesCollection.updateAsync(messageId, {
       $push: {
         seenBy: {
-          username,
+          username: username.trim(),
           seenAt: new Date(),
         } as any,
       },
     });
+
+    if (Meteor.isDevelopment) {
+      console.log(`✓ Message ${messageId} marked as seen by ${username}`);
+    }
+
+    return result;
   },
 });

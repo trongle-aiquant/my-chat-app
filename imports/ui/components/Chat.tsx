@@ -16,23 +16,49 @@ export const Chat: React.FC = () => {
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Ref để track các message đã được mark as seen (tránh gọi lại nhiều lần)
+  const markedAsSeenRef = useRef<Set<string>>(new Set());
+
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Mark messages as seen
+  // Mark messages as seen - SỬA LỖI: Thêm debounce và error handling
   useEffect(() => {
-    if (currentUsername && messages.length > 0) {
-      messages.forEach((message) => {
+    if (!currentUsername || messages.length === 0) {
+      return;
+    }
+
+    // Debounce: Đợi 500ms sau khi messages thay đổi mới mark as seen
+    const timeoutId = setTimeout(() => {
+      messages.forEach(async (message) => {
+        // Chỉ mark tin nhắn của người khác (không phải tin nhắn của mình)
         if (message.username !== currentUsername) {
+          // Kiểm tra xem đã mark chưa (cả trong DB và trong local ref)
           const alreadySeen = message.seenBy?.some((s) => s.username === currentUsername);
-          if (!alreadySeen) {
-            Meteor.callAsync('messages.markAsSeen', message._id!, currentUsername);
+          const alreadyMarkedLocally = markedAsSeenRef.current.has(message._id!);
+
+          if (!alreadySeen && !alreadyMarkedLocally) {
+            try {
+              // Mark locally trước để tránh gọi lại
+              markedAsSeenRef.current.add(message._id!);
+
+              // Gọi method để mark as seen
+              await Meteor.callAsync('messages.markAsSeen', message._id!, currentUsername);
+
+              console.log(`✓ Marked message ${message._id} as seen by ${currentUsername}`);
+            } catch (error: any) {
+              console.error('Error marking message as seen:', error);
+              // Nếu lỗi, remove khỏi local ref để có thể thử lại
+              markedAsSeenRef.current.delete(message._id!);
+            }
           }
         }
       });
-    }
+    }, 500); // Debounce 500ms
+
+    return () => clearTimeout(timeoutId);
   }, [messages, currentUsername]);
 
   const handleReply = (message: Message) => {

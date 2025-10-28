@@ -1,5 +1,5 @@
-import { Meteor } from 'meteor/meteor';
 import { assert } from 'chai';
+import { Meteor } from 'meteor/meteor';
 import { MessagesCollection } from './messages';
 import './messagesMethods';
 
@@ -25,11 +25,7 @@ if (Meteor.isServer) {
       });
 
       it('should trim whitespace from text and username', async function () {
-        const messageId = await Meteor.callAsync(
-          'messages.insert',
-          '  Hello  ',
-          '  User  '
-        );
+        const messageId = await Meteor.callAsync('messages.insert', '  Hello  ', '  User  ');
 
         const message = await MessagesCollection.findOneAsync(messageId);
         assert.equal(message?.text, 'Hello');
@@ -83,6 +79,89 @@ if (Meteor.isServer) {
         await Meteor.callAsync('messages.remove', 'nonexistent-id');
       });
     });
+
+    describe('messages.markAsSeen', function () {
+      it('should mark message as seen by a user', async function () {
+        // Tạo message từ User A
+        const messageId = await MessagesCollection.insertAsync({
+          text: 'Hello from User A',
+          username: 'UserA',
+          createdAt: new Date(),
+          seenBy: [],
+        });
+
+        // User B mark message là đã xem
+        await Meteor.callAsync('messages.markAsSeen', messageId, 'UserB');
+
+        // Kiểm tra message đã được mark
+        const message = await MessagesCollection.findOneAsync(messageId);
+        assert.isNotNull(message);
+        assert.equal(message?.seenBy?.length, 1);
+        assert.equal(message?.seenBy?.[0].username, 'UserB');
+        assert.instanceOf(message?.seenBy?.[0].seenAt, Date);
+      });
+
+      it('should not duplicate seenBy when marking twice', async function () {
+        const messageId = await MessagesCollection.insertAsync({
+          text: 'Test message',
+          username: 'UserA',
+          createdAt: new Date(),
+          seenBy: [],
+        });
+
+        // Mark lần 1
+        await Meteor.callAsync('messages.markAsSeen', messageId, 'UserB');
+        // Mark lần 2 (không nên duplicate)
+        await Meteor.callAsync('messages.markAsSeen', messageId, 'UserB');
+
+        const message = await MessagesCollection.findOneAsync(messageId);
+        assert.equal(message?.seenBy?.length, 1);
+      });
+
+      it('should allow multiple users to mark as seen', async function () {
+        const messageId = await MessagesCollection.insertAsync({
+          text: 'Test message',
+          username: 'UserA',
+          createdAt: new Date(),
+          seenBy: [],
+        });
+
+        // User B và User C mark message
+        await Meteor.callAsync('messages.markAsSeen', messageId, 'UserB');
+        await Meteor.callAsync('messages.markAsSeen', messageId, 'UserC');
+
+        const message = await MessagesCollection.findOneAsync(messageId);
+        assert.equal(message?.seenBy?.length, 2);
+
+        const usernames = message?.seenBy?.map((s) => s.username);
+        assert.include(usernames, 'UserB');
+        assert.include(usernames, 'UserC');
+      });
+
+      it('should throw error for empty username', async function () {
+        const messageId = await MessagesCollection.insertAsync({
+          text: 'Test message',
+          username: 'UserA',
+          createdAt: new Date(),
+          seenBy: [],
+        });
+
+        try {
+          await Meteor.callAsync('messages.markAsSeen', messageId, '');
+          assert.fail('Should have thrown an error');
+        } catch (error: any) {
+          assert.equal(error.error, 'invalid-username');
+        }
+      });
+
+      it('should throw error for non-existent message', async function () {
+        try {
+          await Meteor.callAsync('messages.markAsSeen', 'nonexistent-id', 'UserB');
+          assert.fail('Should have thrown an error');
+        } catch (error: any) {
+          assert.equal(error.error, 'not-found');
+        }
+      });
+    });
   });
 }
-

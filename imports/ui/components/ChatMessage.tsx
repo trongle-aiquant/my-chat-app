@@ -11,6 +11,11 @@ interface ChatMessageProps {
 export const ChatMessage: React.FC<ChatMessageProps> = ({ message, currentUsername, onReply }) => {
   const isOwnMessage = message.username === currentUsername;
 
+  // Debug: Log seenBy data (chỉ trong development)
+  if (process.env.NODE_ENV === 'development' && isOwnMessage && message.seenBy) {
+    console.log(`Message ${message._id} seenBy:`, message.seenBy);
+  }
+
   return (
     <div className={`mb-4 flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
       <div className={`max-w-[70%] ${isOwnMessage ? 'items-end' : 'items-start'} flex flex-col`}>
