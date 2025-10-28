@@ -4,6 +4,7 @@ import { Mongo } from 'meteor/mongo';
 export interface Reaction {
   emoji: string;
   username: string;
+  userId?: string; // User ID for authenticated users
   createdAt: Date;
 }
 
@@ -20,18 +21,21 @@ export interface ReplyTo {
   messageId: string;
   text: string;
   username: string;
+  userId?: string; // User ID for authenticated users
 }
 
 // Seen status interface
 export interface SeenBy {
   username: string;
+  userId?: string; // User ID for authenticated users
   seenAt: Date;
 }
 
 export interface Message {
   _id?: string;
   text: string;
-  username: string;
+  username: string; // Keep for backward compatibility
+  userId?: string; // User ID for authenticated users
   createdAt: Date;
 
   // Advanced features
@@ -39,6 +43,10 @@ export interface Message {
   replyTo?: ReplyTo;
   attachments?: Attachment[];
   seenBy?: SeenBy[];
+
+  // Edit tracking
+  isEdited?: boolean;
+  editedAt?: Date;
 
   // Optional: conversation/room ID for future multi-room support
   conversationId?: string;

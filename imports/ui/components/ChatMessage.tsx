@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Meteor } from 'meteor/meteor';
 import { Message } from '../../api/messages';
 import { MessageReactions } from './MessageReactions';
 
@@ -6,18 +7,54 @@ interface ChatMessageProps {
   message: Message;
   currentUsername: string;
   onReply?: (message: Message) => void;
+  onEdit?: (message: Message) => void;
+  onDelete?: (messageId: string) => void;
 }
 
-export const ChatMessage: React.FC<ChatMessageProps> = ({ message, currentUsername, onReply }) => {
+export const ChatMessage: React.FC<ChatMessageProps> = ({
+  message,
+  currentUsername,
+  onReply,
+  onEdit,
+  onDelete,
+}) => {
   const isOwnMessage = message.username === currentUsername;
+  const [showActions, setShowActions] = useState(false);
 
   // Debug: Log seenBy data (chỉ trong development)
   if (process.env.NODE_ENV === 'development' && isOwnMessage && message.seenBy) {
     console.log(`Message ${message._id} seenBy:`, message.seenBy);
   }
 
+  // Kiểm tra xem message có thể edit được không (trong vòng 15 phút)
+  const canEdit = () => {
+    if (!isOwnMessage) return false;
+    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+    return message.createdAt > fifteenMinutesAgo;
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm('Are you sure you want to delete this message?')) {
+      return;
+    }
+
+    try {
+      // No need to pass username, will use authenticated user
+      await Meteor.callAsync('messages.remove', message._id!);
+      if (onDelete) {
+        onDelete(message._id!);
+      }
+    } catch (error: any) {
+      alert(`Error deleting message: ${error.message}`);
+    }
+  };
+
   return (
-    <div className={`mb-4 flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
+    <div
+      className={`mb-4 flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
+      onMouseEnter={() => setShowActions(true)}
+      onMouseLeave={() => setShowActions(false)}
+    >
       <div className={`max-w-[70%] ${isOwnMessage ? 'items-end' : 'items-start'} flex flex-col`}>
         {/* Reply reference */}
         {message.replyTo && (
@@ -51,6 +88,14 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message, currentUserna
             <span className={`text-xs ${isOwnMessage ? 'text-white/70' : 'text-slate-500'}`}>
               {message.createdAt.toLocaleTimeString()}
             </span>
+            {/* Edited label */}
+            {message.isEdited && (
+              <span
+                className={`text-xs italic ${isOwnMessage ? 'text-white/60' : 'text-slate-400'}`}
+              >
+                (edited)
+              </span>
+            )}
           </div>
 
           {/* Message text */}
@@ -116,6 +161,26 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message, currentUserna
               className="text-xs font-medium text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 px-3 py-1 rounded-full transition-all"
             >
               ↩️ Reply
+            </button>
+          )}
+
+          {/* Edit button - chỉ hiển thị cho tin nhắn của mình và trong vòng 15 phút */}
+          {isOwnMessage && canEdit() && showActions && onEdit && (
+            <button
+              onClick={() => onEdit(message)}
+              className="text-xs font-medium text-slate-500 hover:text-blue-600 hover:bg-blue-50 px-3 py-1 rounded-full transition-all"
+            >
+              ✏️ Edit
+            </button>
+          )}
+
+          {/* Delete button - chỉ hiển thị cho tin nhắn của mình */}
+          {isOwnMessage && showActions && (
+            <button
+              onClick={handleDelete}
+              className="text-xs font-medium text-slate-500 hover:text-red-600 hover:bg-red-50 px-3 py-1 rounded-full transition-all"
+            >
+              🗑️ Delete
             </button>
           )}
         </div>

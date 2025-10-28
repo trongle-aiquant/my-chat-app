@@ -1,6 +1,6 @@
 import { TextInput } from 'flowbite-react';
 import { Meteor } from 'meteor/meteor';
-import { useFind, useSubscribe } from 'meteor/react-meteor-data';
+import { useFind, useSubscribe, useTracker } from 'meteor/react-meteor-data';
 import React, { useEffect, useRef, useState } from 'react';
 import { Message, MessagesCollection } from '../../api/messages';
 import { ChatForm } from './ChatForm';
@@ -8,15 +8,21 @@ import { ChatMessage } from './ChatMessage';
 import { TypingIndicator } from './TypingIndicator';
 
 export const Chat: React.FC = () => {
+  // Get current user from Meteor
+  const currentUser = useTracker(() => Meteor.user());
+  const currentUserId = useTracker(() => Meteor.userId());
+  const currentUsername = currentUser?.username || '';
+
   const isLoading = useSubscribe('messages');
+  useSubscribe('users'); // Subscribe to users for username display
   const messages = useFind(() => MessagesCollection.find({}, { sort: { createdAt: 1 } }));
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const [currentUsername, setCurrentUsername] = useState('');
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Ref để track các message đã được mark as seen (tránh gọi lại nhiều lần)
+  // Ref to track messages already marked as seen (avoid calling multiple times)
   const markedAsSeenRef = useRef<Set<string>>(new Set());
 
   // Auto-scroll to bottom when new messages arrive
@@ -24,33 +30,35 @@ export const Chat: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Mark messages as seen - SỬA LỖI: Thêm debounce và error handling
+  // Mark messages as seen - with debounce and error handling
   useEffect(() => {
-    if (!currentUsername || messages.length === 0) {
+    if (!currentUserId || !currentUsername || messages.length === 0) {
       return;
     }
 
-    // Debounce: Đợi 500ms sau khi messages thay đổi mới mark as seen
+    // Debounce: Wait 500ms after messages change before marking as seen
     const timeoutId = setTimeout(() => {
       messages.forEach(async (message) => {
-        // Chỉ mark tin nhắn của người khác (không phải tin nhắn của mình)
-        if (message.username !== currentUsername) {
-          // Kiểm tra xem đã mark chưa (cả trong DB và trong local ref)
-          const alreadySeen = message.seenBy?.some((s) => s.username === currentUsername);
+        // Only mark messages from others (not your own messages)
+        if (message.userId !== currentUserId) {
+          // Check if already marked (both in DB and in local ref)
+          const alreadySeen = message.seenBy?.some(
+            (s) => s.userId === currentUserId || s.username === currentUsername
+          );
           const alreadyMarkedLocally = markedAsSeenRef.current.has(message._id!);
 
           if (!alreadySeen && !alreadyMarkedLocally) {
             try {
-              // Mark locally trước để tránh gọi lại
+              // Mark locally first to avoid calling again
               markedAsSeenRef.current.add(message._id!);
 
-              // Gọi method để mark as seen
-              await Meteor.callAsync('messages.markAsSeen', message._id!, currentUsername);
+              // Call method to mark as seen
+              await Meteor.callAsync('messages.markAsSeen', message._id!);
 
               console.log(`✓ Marked message ${message._id} as seen by ${currentUsername}`);
             } catch (error: any) {
               console.error('Error marking message as seen:', error);
-              // Nếu lỗi, remove khỏi local ref để có thể thử lại
+              // If error, remove from local ref to retry
               markedAsSeenRef.current.delete(message._id!);
             }
           }
@@ -59,7 +67,7 @@ export const Chat: React.FC = () => {
     }, 500); // Debounce 500ms
 
     return () => clearTimeout(timeoutId);
-  }, [messages, currentUsername]);
+  }, [messages, currentUserId, currentUsername]);
 
   const handleReply = (message: Message) => {
     setReplyingTo(message);
@@ -67,6 +75,21 @@ export const Chat: React.FC = () => {
 
   const handleCancelReply = () => {
     setReplyingTo(null);
+  };
+
+  const handleEdit = (message: Message) => {
+    setEditingMessage(message);
+    // Cancel reply nếu đang reply
+    setReplyingTo(null);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMessage(null);
+  };
+
+  const handleDelete = (messageId: string) => {
+    // Callback after successful deletion (if needed)
+    console.log(`Message ${messageId} deleted`);
   };
 
   // Filter messages based on search query
@@ -99,12 +122,14 @@ export const Chat: React.FC = () => {
               </div>
               <div>
                 <h2 className="text-2xl font-bold text-white">Chat Room</h2>
-                <p className="text-sm text-white/80">Connect and collaborate</p>
+                <p className="text-sm text-white/80">
+                  Welcome, <span className="font-semibold">{currentUsername}</span>
+                </p>
               </div>
             </div>
 
             {/* Search */}
-            <div className="w-72">
+            <div className="w-64">
               <div className="relative">
                 <TextInput
                   type="text"
@@ -126,27 +151,6 @@ export const Chat: React.FC = () => {
 
         {/* Main content area */}
         <div className="p-6">
-          {/* Username input (if not set) */}
-          {!currentUsername && (
-            <div className="mb-6 p-5 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border-2 border-indigo-200 shadow-md">
-              <label className="flex items-center gap-2 text-sm font-bold text-indigo-900 mb-3">
-                <span className="text-xl">👤</span>
-                Enter your name to start chatting:
-              </label>
-              <TextInput
-                type="text"
-                placeholder="Your name"
-                onBlur={(e) => setCurrentUsername(e.target.value)}
-                sizing="md"
-                style={{
-                  backgroundColor: 'white',
-                  color: '#1e293b',
-                }}
-                className="placeholder:text-slate-400 border-indigo-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 shadow-sm"
-              />
-            </div>
-          )}
-
           {/* Messages container with subtle background */}
           <div className="h-[500px] overflow-y-auto mb-6 px-3 py-4 bg-white/60 backdrop-blur-sm rounded-xl border border-slate-200 shadow-inner">
             {filteredMessages.length === 0 ? (
@@ -165,6 +169,8 @@ export const Chat: React.FC = () => {
                   message={message}
                   currentUsername={currentUsername}
                   onReply={handleReply}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
                 />
               ))
             )}
@@ -178,8 +184,9 @@ export const Chat: React.FC = () => {
           {/* Chat form */}
           <ChatForm
             replyingTo={replyingTo}
+            editingMessage={editingMessage}
             onCancelReply={handleCancelReply}
-            defaultUsername={currentUsername}
+            onCancelEdit={handleCancelEdit}
           />
         </div>
       </div>
