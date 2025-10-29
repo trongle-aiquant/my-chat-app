@@ -2,8 +2,15 @@ import { Meteor } from 'meteor/meteor';
 import { TasksCollection } from './tasks';
 
 Meteor.publish('tasks', function () {
-  return TasksCollection.find({}, {
-    sort: { createdAt: -1 },
-  });
-});
+  // Authentication check
+  if (!this.userId) {
+    return this.ready();
+  }
 
+  return TasksCollection.find(
+    {},
+    {
+      sort: { createdAt: -1 },
+    }
+  );
+});

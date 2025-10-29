@@ -9,6 +9,7 @@ mobile-experience@1.1.2       # Packages for a great mobile UX
 mongo@2.1.4                   # The database Meteor supports right now
 reactive-var@1.0.13            # Reactive variable for tracker
 check@1.4.3                   # Check whether a value matches a pattern
+accounts-password@3.1.0       # Password-based authentication for Meteor accounts
 
 standard-minifier-css@1.9.3   # CSS minifier run for production mode
 standard-minifier-js@3.1.1    # JS minifier run for production mode

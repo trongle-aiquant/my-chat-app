@@ -1,5 +1,10 @@
+<<<<<<< HEAD
 import { Meteor } from 'meteor/meteor';
 import React, { useState } from 'react';
+=======
+import React, { useState } from 'react';
+import { Meteor } from 'meteor/meteor';
+>>>>>>> 07919d91d6c860a932aa08ec3b5fc59439363906
 import { Message } from '../../api/messages';
 import { MessageReactions } from './MessageReactions';
 
@@ -7,13 +12,19 @@ interface ChatMessageProps {
   message: Message;
   currentUsername: string;
   onReply?: (message: Message) => void;
+<<<<<<< HEAD
   isHighlighted?: boolean;
+=======
+  onEdit?: (message: Message) => void;
+  onDelete?: (messageId: string) => void;
+>>>>>>> 07919d91d6c860a932aa08ec3b5fc59439363906
 }
 
 export const ChatMessage: React.FC<ChatMessageProps> = ({
   message,
   currentUsername,
   onReply,
+<<<<<<< HEAD
   isHighlighted,
 }) => {
   const isOwnMessage = message.username === currentUsername;
@@ -37,18 +48,54 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
       setIsPinning(false);
     }
   };
+=======
+  onEdit,
+  onDelete,
+}) => {
+  const isOwnMessage = message.username === currentUsername;
+  const [showActions, setShowActions] = useState(false);
+>>>>>>> 07919d91d6c860a932aa08ec3b5fc59439363906
 
   // Debug: Log seenBy data (chỉ trong development)
   if (process.env.NODE_ENV === 'development' && isOwnMessage && message.seenBy) {
     console.log(`Message ${message._id} seenBy:`, message.seenBy);
   }
 
+  // Kiểm tra xem message có thể edit được không (trong vòng 15 phút)
+  const canEdit = () => {
+    if (!isOwnMessage) return false;
+    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+    return message.createdAt > fifteenMinutesAgo;
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm('Are you sure you want to delete this message?')) {
+      return;
+    }
+
+    try {
+      // No need to pass username, will use authenticated user
+      await Meteor.callAsync('messages.remove', message._id!);
+      if (onDelete) {
+        onDelete(message._id!);
+      }
+    } catch (error: any) {
+      alert(`Error deleting message: ${error.message}`);
+    }
+  };
+
   return (
     <div
+<<<<<<< HEAD
       id={`message-${message._id}`}
       className={`mb-4 flex ${
         isOwnMessage ? 'justify-end' : 'justify-start'
       } transition-all duration-500 ${isHighlighted ? 'scale-105' : ''}`}
+=======
+      className={`mb-4 flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
+      onMouseEnter={() => setShowActions(true)}
+      onMouseLeave={() => setShowActions(false)}
+>>>>>>> 07919d91d6c860a932aa08ec3b5fc59439363906
     >
       <div className={`max-w-[70%] ${isOwnMessage ? 'items-end' : 'items-start'} flex flex-col`}>
         {/* Reply reference */}
@@ -89,6 +136,14 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
             >
               {message.createdAt.toLocaleTimeString()}
             </span>
+            {/* Edited label */}
+            {message.isEdited && (
+              <span
+                className={`text-xs italic ${isOwnMessage ? 'text-white/60' : 'text-slate-400'}`}
+              >
+                (edited)
+              </span>
+            )}
           </div>
 
           {/* Message text */}
@@ -157,6 +212,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
             </button>
           )}
 
+<<<<<<< HEAD
           {/* Pin/Unpin button */}
           <button
             onClick={handleTogglePin}
@@ -170,6 +226,27 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
           >
             {isPinning ? '⏳' : message.isPinned ? '📌 Pinned' : '📌 Pin'}
           </button>
+=======
+          {/* Edit button - chỉ hiển thị cho tin nhắn của mình và trong vòng 15 phút */}
+          {isOwnMessage && canEdit() && showActions && onEdit && (
+            <button
+              onClick={() => onEdit(message)}
+              className="text-xs font-medium text-slate-500 hover:text-blue-600 hover:bg-blue-50 px-3 py-1 rounded-full transition-all"
+            >
+              ✏️ Edit
+            </button>
+          )}
+
+          {/* Delete button - chỉ hiển thị cho tin nhắn của mình */}
+          {isOwnMessage && showActions && (
+            <button
+              onClick={handleDelete}
+              className="text-xs font-medium text-slate-500 hover:text-red-600 hover:bg-red-50 px-3 py-1 rounded-full transition-all"
+            >
+              🗑️ Delete
+            </button>
+          )}
+>>>>>>> 07919d91d6c860a932aa08ec3b5fc59439363906
         </div>
       </div>
     </div>

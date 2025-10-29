@@ -4,6 +4,11 @@ import { TasksCollection } from './tasks';
 
 Meteor.methods({
   'tasks.insert': async function (text: string) {
+    // Authentication check
+    if (!this.userId) {
+      throw new Meteor.Error('not-authorized', 'You must be logged in to create tasks');
+    }
+
     check(text, String);
 
     if (!text || text.trim().length === 0) {
@@ -18,11 +23,21 @@ Meteor.methods({
   },
 
   'tasks.remove': async function (taskId: string) {
+    // Authentication check
+    if (!this.userId) {
+      throw new Meteor.Error('not-authorized', 'You must be logged in to delete tasks');
+    }
+
     check(taskId, String);
     return await TasksCollection.removeAsync(taskId);
   },
 
   'tasks.setChecked': async function (taskId: string, isChecked: boolean) {
+    // Authentication check
+    if (!this.userId) {
+      throw new Meteor.Error('not-authorized', 'You must be logged in to update tasks');
+    }
+
     check(taskId, String);
     check(isChecked, Boolean);
 

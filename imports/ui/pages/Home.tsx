@@ -1,11 +1,26 @@
 import { Button } from 'flowbite-react';
+import { Meteor } from 'meteor/meteor';
+import { useTracker } from 'meteor/react-meteor-data';
 import React from 'react';
-import { Link } from 'react-router-dom';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { useDarkMode } from '../hooks/useDarkMode';
 
 export const Home: React.FC = () => {
   const { isDarkMode, toggleDarkMode } = useDarkMode();
+import { Link, useNavigate } from 'react-router-dom';
+
+export const Home: React.FC = () => {
+  const navigate = useNavigate();
+  const currentUser = useTracker(() => Meteor.user());
+  const isLoggedIn = !!currentUser;
+
+  const handleChatClick = () => {
+    if (isLoggedIn) {
+      navigate('/chat');
+    } else {
+      navigate('/auth');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center px-4 transition-colors duration-300">
@@ -22,12 +37,20 @@ export const Home: React.FC = () => {
           Real-time collaboration powered by Meteor.js, React, and Flowbite UI
         </p>
 
+        {/* Show user info if logged in */}
+        {isLoggedIn && (
+          <div className="mb-6 p-4 bg-white rounded-lg shadow-md inline-block">
+            <p className="text-gray-700">
+              Welcome back,{' '}
+              <span className="font-bold text-indigo-600">{currentUser.username}</span>!
+            </p>
+          </div>
+        )}
+
         <div className="flex gap-6 justify-center mb-12">
-          <Link to="/chat">
-            <Button size="xl" color="blue" className="px-8 py-4">
-              <span className="text-lg">💬 Start Chatting</span>
-            </Button>
-          </Link>
+          <Button size="xl" color="blue" className="px-8 py-4" onClick={handleChatClick}>
+            <span className="text-lg">{isLoggedIn ? '💬 Start Chatting' : '🔐 Login to Chat'}</span>
+          </Button>
           <Link to="/todos">
             <Button size="xl" color="success" className="px-8 py-4">
               <span className="text-lg">✅ Manage Todos</span>
@@ -42,7 +65,11 @@ export const Home: React.FC = () => {
               Advanced Chat Features
             </h3>
             <ul className="text-left text-gray-600 dark:text-slate-300 space-y-2 transition-colors duration-300">
+            <h3 className="text-xl font-bold text-gray-800 mb-2">Advanced Chat Features</h3>
+            <ul className="text-left text-gray-600 space-y-2">
+              <li>🔐 User authentication</li>
               <li>✨ Real-time messaging</li>
+              <li>✏️ Edit & delete messages</li>
               <li>😊 Reactions & Emojis</li>
               <li>↩️ Reply to messages</li>
               <li>📎 File attachments</li>

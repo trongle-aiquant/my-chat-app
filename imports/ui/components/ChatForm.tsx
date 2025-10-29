@@ -1,5 +1,6 @@
 import { Button, TextInput } from 'flowbite-react';
 import { Meteor } from 'meteor/meteor';
+import { useTracker } from 'meteor/react-meteor-data';
 import React, { useEffect, useRef, useState } from 'react';
 import { Attachment, Message, ReplyTo } from '../../api/messages';
 import { useDarkMode } from '../hooks/useDarkMode';
@@ -8,17 +9,22 @@ import { FileUpload } from './FileUpload';
 
 interface ChatFormProps {
   replyingTo?: Message | null;
+  editingMessage?: Message | null;
   onCancelReply?: () => void;
-  defaultUsername?: string;
+  onCancelEdit?: () => void;
 }
 
 export const ChatForm: React.FC<ChatFormProps> = ({
   replyingTo,
+  editingMessage,
   onCancelReply,
-  defaultUsername = '',
+  onCancelEdit,
 }) => {
+  // Get current user from Meteor
+  const currentUser = useTracker(() => Meteor.user());
+  const username = currentUser?.username || '';
+
   const [text, setText] = useState('');
-  const [username, setUsername] = useState(defaultUsername);
   const [error, setError] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -28,19 +34,24 @@ export const ChatForm: React.FC<ChatFormProps> = ({
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { isDarkMode } = useDarkMode();
 
-  // Update username when defaultUsername changes
+  // Focus input when replying or editing
   useEffect(() => {
-    if (defaultUsername) {
-      setUsername(defaultUsername);
-    }
-  }, [defaultUsername]);
-
-  // Focus input when replying
-  useEffect(() => {
-    if (replyingTo) {
+    if (replyingTo || editingMessage) {
       inputRef.current?.focus();
     }
-  }, [replyingTo]);
+  }, [replyingTo, editingMessage]);
+
+  // Populate text when editing
+  useEffect(() => {
+    if (editingMessage) {
+      setText(editingMessage.text);
+    } else {
+      // Clear text khi không edit nữa
+      if (!replyingTo) {
+        setText('');
+      }
+    }
+  }, [editingMessage, replyingTo]);
 
   // Handle typing indicator
   const handleTyping = () => {
@@ -66,8 +77,13 @@ export const ChatForm: React.FC<ChatFormProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!text.trim() || !username.trim()) {
-      setError('Please enter both username and message');
+    if (!text.trim()) {
+      setError('Please enter a message');
+      return;
+    }
+
+    if (!username) {
+      setError('You must be logged in to send messages');
       return;
     }
 
@@ -78,6 +94,19 @@ export const ChatForm: React.FC<ChatFormProps> = ({
         setIsTyping(false);
       }
 
+      // If editing, call update method
+      if (editingMessage) {
+        await Meteor.callAsync('messages.update', editingMessage._id!, text);
+        setText('');
+        setError('');
+
+        if (onCancelEdit) {
+          onCancelEdit();
+        }
+        return;
+      }
+
+      // If not editing, call insert method as normal
       // Prepare reply data if replying
       let replyToData: ReplyTo | undefined;
       if (replyingTo) {
@@ -88,7 +117,8 @@ export const ChatForm: React.FC<ChatFormProps> = ({
         };
       }
 
-      await Meteor.callAsync('messages.insert', text, username, replyToData, attachments);
+      // Note: username parameter is optional now, will use authenticated user's username
+      await Meteor.callAsync('messages.insert', text, undefined, replyToData, attachments);
       setText('');
       setAttachments([]);
       setError('');
@@ -134,6 +164,23 @@ export const ChatForm: React.FC<ChatFormProps> = ({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
+      {/* Edit preview */}
+      {editingMessage && (
+        <div className="flex items-center justify-between bg-amber-50 border-l-4 border-amber-500 p-3 rounded-lg">
+          <div className="flex-1">
+            <div className="text-xs font-semibold text-amber-600">✏️ Editing message</div>
+            <div className="text-sm text-gray-600 truncate">{editingMessage.text}</div>
+          </div>
+          <button
+            type="button"
+            onClick={onCancelEdit}
+            className="ml-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full w-6 h-6 flex items-center justify-center transition-all"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Reply preview */}
       {replyingTo && (
         <div className="flex items-center justify-between bg-blue-50 dark:bg-blue-900/40 border-l-4 border-blue-500 dark:border-blue-500 p-3 rounded-lg transition-colors duration-300">
@@ -253,7 +300,7 @@ export const ChatForm: React.FC<ChatFormProps> = ({
           type="submit"
           className="px-8 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
         >
-          Send 📤
+          {editingMessage ? 'Update ✏️' : 'Send 📤'}
         </Button>
       </div>
 
