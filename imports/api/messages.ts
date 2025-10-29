@@ -40,6 +40,11 @@ export interface Message {
   attachments?: Attachment[];
   seenBy?: SeenBy[];
 
+  // Pin feature
+  isPinned?: boolean;
+  pinnedAt?: Date;
+  pinnedBy?: string;
+
   // Optional: conversation/room ID for future multi-room support
   conversationId?: string;
 }

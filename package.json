@@ -10,6 +10,7 @@
   "dependencies": {
     "@babel/runtime": "^7.23.5",
     "@swc/helpers": "^0.5.17",
+    "emoji-picker-react": "^4.15.0",
     "flowbite": "^3.1.2",
     "flowbite-react": "^0.12.9",
     "meteor-node-stubs": "^1.2.12",

@@ -121,4 +121,65 @@ Meteor.methods({
 
     return result;
   },
+
+  'messages.pin': async function (messageId: string, username: string, conversationId?: string) {
+    check(messageId, String);
+    check(username, String);
+
+    // Validation
+    if (!username || username.trim().length === 0) {
+      throw new Meteor.Error('invalid-username', 'Username cannot be empty');
+    }
+
+    // Check if message exists
+    const message = await MessagesCollection.findOneAsync(messageId);
+    if (!message) {
+      throw new Meteor.Error('not-found', 'Message not found');
+    }
+
+    // Check if already pinned
+    if (message.isPinned) {
+      throw new Meteor.Error('already-pinned', 'Message is already pinned');
+    }
+
+    // Count current pinned messages (max 5)
+    const pinnedCount = await MessagesCollection.find({
+      isPinned: true,
+      conversationId: conversationId || { $exists: false },
+    }).countAsync();
+
+    if (pinnedCount >= 5) {
+      throw new Meteor.Error('max-pins-reached', 'Maximum 5 pinned messages allowed');
+    }
+
+    // Pin the message
+    return await MessagesCollection.updateAsync(messageId, {
+      $set: {
+        isPinned: true,
+        pinnedAt: new Date(),
+        pinnedBy: username.trim(),
+      },
+    });
+  },
+
+  'messages.unpin': async function (messageId: string) {
+    check(messageId, String);
+
+    // Check if message exists
+    const message = await MessagesCollection.findOneAsync(messageId);
+    if (!message) {
+      throw new Meteor.Error('not-found', 'Message not found');
+    }
+
+    // Unpin the message
+    return await MessagesCollection.updateAsync(messageId, {
+      $set: {
+        isPinned: false,
+      },
+      $unset: {
+        pinnedAt: '',
+        pinnedBy: '',
+      },
+    });
+  },
 });
